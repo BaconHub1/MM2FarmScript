@@ -1,36 +1,71 @@
+
+-- Bacon Admin (Nameless Admin core with full Bacon branding)
+if not game:IsLoaded() then game.Loaded:Wait() end
+
+-- Load the Nameless Admin source
+local source = game:HttpGet("https://raw.githubusercontent.com/ltseverydayyou/Nameless-Admin/main/Source.lua")
+loadstring(source)()
+
 local Players = game:GetService("Players")
-local RunService = game:GetService("RunService")
-local LocalPlayer = Players.LocalPlayer
-local Character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
-local HumanoidRootPart = Character:WaitForChild("HumanoidRootPart")
+local CoreGui = game:GetService("CoreGui")
 
-local function getNearestEgg()
-    local eggsFolder = workspace:FindFirstChild("Eggs")
-    if not eggsFolder then return nil end
+-- Replace the NM logo with a Bacon logo & rebrand UI texts
+task.defer(function()
+    wait(2)
+    local gui = CoreGui:FindFirstChild("Nameless Admin") or CoreGui:FindFirstChildWhichIsA("ScreenGui", true)
+    if gui then
+        gui.Name = "Bacon Admin"
 
-    local nearestEgg = nil
-    local shortestDistance = math.huge
-    for _, egg in pairs(eggsFolder:GetChildren()) do
-        if egg:IsA("BasePart") and egg.Transparency < 1 then
-            local dist = (HumanoidRootPart.Position - egg.Position).Magnitude
-            if dist < shortestDistance then
-                shortestDistance = dist
-                nearestEgg = egg
+        -- Change all label/button text from Nameless Admin to Bacon Admin
+        for _, obj in pairs(gui:GetDescendants()) do
+            if (obj:IsA("TextLabel") or obj:IsA("TextButton")) and typeof(obj.Text) == "string" then
+                obj.Text = obj.Text:gsub("[Nn]ameless", "Bacon")
+                obj.Text = obj.Text:gsub("Admin", "Bacon Admin")
+            end
+        end
+
+        -- Replace NM logo Image with Bacon logo image (example asset ID)
+        local logo = gui:FindFirstChild("Logo") or gui:FindFirstChildWhichIsA("ImageLabel", true)
+        if logo then
+            logo.Image = "rbxassetid://14721034383" -- Put your Bacon logo asset ID here
+        end
+
+        -- Change the command bar title to "Bacon Admin"
+        local commandBar = gui:FindFirstChild("CommandBar") or gui:FindFirstChildWhichIsA("Frame", true)
+        if commandBar then
+            for _, child in pairs(commandBar:GetDescendants()) do
+                if child:IsA("TextLabel") and child.Text:lower():find("nameless") then
+                    child.Text = child.Text:gsub("[Nn]ameless", "Bacon")
+                    child.Text = child.Text:gsub("Admin", "Bacon Admin")
+                end
             end
         end
     end
+end)
 
-    return nearestEgg
+-- Allow admins to make other players admins, and propagate command permissions fully
+local adminService = require(game:GetService("ReplicatedStorage"):WaitForChild("NamelessAdmin"))
+-- (or adjust if module name changed)
+
+-- Override addAdmin function so when someone makes a user admin, they get full access
+local originalAddAdmin = adminService.AddAdmin
+adminService.AddAdmin = function(self, playerName)
+    local success, err = pcall(function()
+        originalAddAdmin(self, playerName)
+        local player = Players:FindFirstChild(playerName)
+        if player then
+            -- Give the new admin full access
+            self:SetAdmin(player, true)
+        end
+    end)
+    if not success then warn("Failed to add admin: "..tostring(err)) end
 end
 
-while wait(0.5) do
-    if not LocalPlayer.Character or not LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
-        Character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
-        HumanoidRootPart = Character:WaitForChild("HumanoidRootPart")
-    end
-
-    local egg = getNearestEgg()
-    if egg then
-        HumanoidRootPart.CFrame = egg.CFrame + Vector3.new(0, 3, 0)
-    end
-end
+-- Optional welcome notification
+pcall(function()
+    game.StarterGui:SetCore("SendNotification", {
+        Title = "Bacon Admin",
+        Text = "Loaded! Use :cmds to see commands.",
+        Duration = 5
+    })
+end)
